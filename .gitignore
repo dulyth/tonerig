@@ -1,0 +1,9 @@
+build/
+third_party/JUCE/
+*.vst3
+*.component
+*.dll
+.vs/
+.vscode/
+*.user
+.DS_Store
