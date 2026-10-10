@@ -1,1 +1,47 @@
+name: Build ToneRig (Windows x64 VST3)
 
+on:
+  push:
+    branches: ['**']
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: windows-latest
+
+    steps:
+      - name: Check out the source
+        uses: actions/checkout@v4
+
+      # Fails fast with a clear message if the project source was not uploaded.
+      - name: Check the repository contents
+        shell: pwsh
+        run: |
+          Write-Host "== repository root =="
+          Get-ChildItem -Force | Select-Object Mode, Length, Name | Format-Table -AutoSize
+          $required = @('CMakeLists.txt', 'Source', 'Tests', 'scripts\build-windows.ps1')
+          $missing = @($required | Where-Object { -not (Test-Path $_) })
+          if ($missing.Count -gt 0) {
+            throw ("These paths are missing from the repository: {0}. Upload the project source files (Code > Add file > Upload files) and re-run." -f ($missing -join ', '))
+          }
+          Write-Host "All required paths are present."
+
+      - name: Show the toolchain the runner provides
+        shell: pwsh
+        run: |
+          cmake --version
+          git --version
+          $vswhere = "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vswhere.exe"
+          if (Test-Path $vswhere) { & $vswhere -latest -property displayName }
+
+      - name: Build VST3 and run the DSP test suite
+        shell: pwsh
+        run: powershell -ExecutionPolicy Bypass -File .\scripts\build-windows.ps1
+
+      - name: Upload ToneRig.vst3
+        uses: actions/upload-artifact@v4
+        with:
+          name: ToneRig-vst3-windows-x64
+          path: build/ToneRig_artefacts/Release/VST3/ToneRig.vst3
+          if-no-files-found: error
+          retention-days: 90
